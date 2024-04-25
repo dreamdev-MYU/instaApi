@@ -64,8 +64,10 @@ class User(AbstractUser):
         code = ''.join([str(random.randint(0,9)) for _ in range(4)])
         CodeVerification.objects.create(
             code=code,
-            auth_type= auth_type
+            auth_type= auth_type,
+            user_id = self.id
         )
+        return code
 
 class CodeVerification(models.Model):
     AUTH_TYPE = (
@@ -76,7 +78,7 @@ class CodeVerification(models.Model):
     auth_type = models.CharField(max_length=50, choices=AUTH_TYPE)
     expire_time = models.DateTimeField()
     is_vereified = models.BooleanField(default=False)
-
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="verification_codes", null=True, blank=True)
     def save(self, *args, **kwargs):
         if self.auth_type == EMAIL:
             self.expire_time = datetime.now()+timedelta(minutes=2)
@@ -84,3 +86,6 @@ class CodeVerification(models.Model):
             self.expire_time = datetime.now()+timedelta(minutes=2)
 
         super(CodeVerification, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.code

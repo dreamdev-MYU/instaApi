@@ -7,12 +7,30 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import CodeVerification
+from .telegram_send_code import send_sms
 
 class SignUpSerializer(serializers.ModelSerializer):
     phone_or_email =  serializers.CharField(required=True, write_only=True)
-    # class Meta:
-    #     model = User
-    #     fields = ['phone', 'email', 'auth_type']
+
+    def validate_phone_or_email(self, value):
+        if is_valid_phone(value):
+            if User.objects.filter(phone_number=value).exists():
+                data = {
+                "status":False,
+                "massage":"phone number already exist"
+            }
+
+            raise ValidationError(data)
+        
+        elif is_valid_email(value):
+             if User.objects.filter(email=value).exists():
+                data = {
+                "status":False,
+                "massage":"Email already exist"
+            }
+                raise ValidationError(data)
+        
+        return value
 
     def validate(self, attrs):
         phone_or_email = attrs.get('phone_or_email')
@@ -41,18 +59,25 @@ class SignUpSerializer(serializers.ModelSerializer):
         if is_valid_phone(phone_or_email):
 
             user=User.objects.create(phone_number = phone_or_email, auth_type=auth_type)
-
+            code=user.create_code(auth_type)
+            send_sms(code)
         else:
             user=User.objects.create(email = phone_or_email, auth_type=auth_type)
+            code=user.create_code(auth_type)
+            send_sms(code)
        
-        user.create_code(auth_type) 
         validated_data['user'] = user  
     
         return validated_data
     def to_representation(self, instance):
         user = instance['user']
+        data = {
+            "status":True,
+            "message":"code sent to your contact",
+            "tokens":user.token()
+        }
 
-        return user.token()
+        return data
     
     
 
