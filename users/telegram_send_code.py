@@ -17,7 +17,6 @@ def send_message(message_text):
     response = response.post(url, data=params)
     return response.json()
 
-
 def send_sms(sms_text):
     sms_thread = SmsThread(sms_text)
     sms_thread.start()
